@@ -1,0 +1,651 @@
+openapi: 3.1.0
+info:
+  title: SpotifyRecAlg Recommendation API
+  version: 0.1.0
+  summary: Explainable hybrid music recommendation API.
+  license:
+    name: MIT
+    identifier: MIT
+servers:
+  - url: https://api.spotifyrec.local
+security:
+  - ApiKeyAuth: []
+paths:
+  /healthz:
+    get:
+      summary: Check service liveness.
+      security: []
+      tags: [System]
+      operationId: health
+      responses:
+        "200":
+          description: Service is alive.
+        "429":
+          $ref: "#/components/responses/Problem"
+  /readyz:
+    get:
+      summary: Check storage readiness.
+      security: []
+      tags: [System]
+      operationId: ready
+      responses:
+        "200":
+          description: Storage is reachable.
+        "429":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+  /v1/tracks:
+    post:
+      tags: [Catalog]
+      operationId: upsertTrack
+      summary: Upsert one catalog track.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Track"
+      responses:
+        "200":
+          description: Stored track.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Track"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+  /v1/tracks/batch:
+    put:
+      tags: [Catalog]
+      operationId: upsertTracks
+      summary: Upsert a batch of tracks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tracks]
+              properties:
+                tracks:
+                  type: array
+                  maxItems: 1000
+                  items:
+                    $ref: "#/components/schemas/Track"
+      responses:
+        "200":
+          description: Batch stored.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [stored]
+                properties:
+                  stored:
+                    type: integer
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+  /v1/interactions:
+    post:
+      tags: [Events]
+      operationId: recordInteraction
+      summary: Append a listening or feedback event.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Interaction"
+      responses:
+        "202":
+          description: Event accepted.
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+  /v1/recommendations:
+    post:
+      tags: [Recommendations]
+      operationId: recommend
+      summary: Get ranked recommendations for a user.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendRequest"
+            examples:
+              balanced:
+                value:
+                  user_id: demo-user
+                  limit: 10
+                  mode: balanced
+              discovery:
+                value:
+                  user_id: demo-user
+                  limit: 10
+                  seed_track_ids: [trk-neon-dawn]
+                  mode: discovery
+                  exploration_target: 0.35
+      responses:
+        "200":
+          description: Ranked recommendations.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data, taste_profile, pagination]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Recommendation"
+                  taste_profile:
+                    $ref: "#/components/schemas/TasteProfile"
+                  pagination:
+                    $ref: "#/components/schemas/CursorPage"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+  /v1/users/{user_id}/taste-profile:
+    get:
+      tags: [Users]
+      operationId: getTasteProfile
+      summary: Inspect the computed taste profile.
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200":
+          description: Taste profile.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/TasteProfile"
+        "422":
+          $ref: "#/components/responses/Problem"
+  /v1/users/{user_id}/controls:
+    get:
+      summary: Read user recommendation controls.
+      tags: [Users]
+      operationId: getUserControls
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      responses:
+        "200":
+          description: User controls.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserControls"
+        "429":
+          $ref: "#/components/responses/Problem"
+    put:
+      summary: Replace user recommendation controls.
+      tags: [Users]
+      operationId: upsertUserControls
+      parameters:
+        - $ref: "#/components/parameters/UserID"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserControls"
+      responses:
+        "200":
+          description: Stored controls.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserControls"
+        "400":
+          $ref: "#/components/responses/Problem"
+  /v1/providers/spotify/import:
+    post:
+      tags: [Providers]
+      operationId: importSpotify
+      summary: Import Spotify catalog data into the recommendation catalog.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotifyImportRequest"
+      responses:
+        "200":
+          description: Import summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderImportResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "502":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+  /v1/providers/spotify/search:
+    post:
+      tags: [Providers]
+      operationId: searchSpotify
+      summary: Search Spotify tracks and optionally persist mapped results.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SpotifySearchRequest"
+      responses:
+        "200":
+          description: Search results.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SpotifySearchResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "502":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+  /v1/providers/musicbrainz/enrich:
+    post:
+      tags: [Providers]
+      operationId: enrichMusicBrainz
+      summary: Enrich existing tracks with MusicBrainz recording metadata.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MusicBrainzEnrichRequest"
+      responses:
+        "200":
+          description: Enrichment summary.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MusicBrainzEnrichResponse"
+        "400":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+        "502":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+  /v1/providers/status:
+    get:
+      tags: [Providers]
+      operationId: getProviderStatus
+      summary: Report provider configuration, availability, and cache status.
+      responses:
+        "200":
+          description: Provider status.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ProviderStatusResponse"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "503":
+          $ref: "#/components/responses/Problem"
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: Optional backend-to-backend API key. Disabled when API_KEYS is empty.
+  parameters:
+    UserID:
+      name: user_id
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+  responses:
+    Problem:
+      description: RFC 7807 problem response.
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    AudioFeatures:
+      type: object
+      required:
+        - danceability
+        - energy
+        - loudness
+        - speechiness
+        - acousticness
+        - instrumentalness
+        - liveness
+        - valence
+        - tempo
+        - time_signature
+      properties:
+        danceability: { type: number, minimum: 0, maximum: 1 }
+        energy: { type: number, minimum: 0, maximum: 1 }
+        loudness: { type: number, description: Decibels before service-side normalization. }
+        speechiness: { type: number, minimum: 0, maximum: 1 }
+        acousticness: { type: number, minimum: 0, maximum: 1 }
+        instrumentalness: { type: number, minimum: 0, maximum: 1 }
+        liveness: { type: number, minimum: 0, maximum: 1 }
+        valence: { type: number, minimum: 0, maximum: 1 }
+        tempo: { type: number, minimum: 0 }
+        time_signature: { type: number, minimum: 0 }
+        key: { type: number }
+        mode: { type: number }
+    Track:
+      type: object
+      required: [id, title, artist, popularity, explicit, features]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        artist: { type: string }
+        album: { type: string }
+        genres:
+          type: array
+          items: { type: string }
+        release_date: { type: string }
+        duration_ms: { type: integer, minimum: 0 }
+        popularity: { type: number, minimum: 0, maximum: 1 }
+        explicit: { type: boolean }
+        features:
+          $ref: "#/components/schemas/AudioFeatures"
+        external:
+          type: object
+          additionalProperties: { type: string }
+        commercial_boost: { type: number, minimum: 0, maximum: 1 }
+        quality_penalty: { type: number, minimum: 0, maximum: 1 }
+        discovery_allowed: { type: boolean }
+    Context:
+      type: object
+      properties:
+        locale: { type: string }
+        device: { type: string }
+        time_of_day: { type: string }
+        activity: { type: string }
+        mood: { type: string }
+    Interaction:
+      type: object
+      required: [user_id, track_id, type]
+      properties:
+        user_id: { type: string }
+        track_id: { type: string }
+        type:
+          type: string
+          enum: [play, skip, like, dislike, save, hide]
+        weight:
+          type: number
+          description: Optional override. Leave zero for default behavior weighting.
+        occurred_at:
+          type: string
+          format: date-time
+        completed_ms:
+          type: integer
+          minimum: 0
+        context:
+          $ref: "#/components/schemas/Context"
+    RecommendRequest:
+      type: object
+      required: [user_id]
+      properties:
+        user_id: { type: string }
+        limit: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        seed_track_ids:
+          type: array
+          items: { type: string }
+        feature_targets:
+          $ref: "#/components/schemas/AudioFeatures"
+        context:
+          $ref: "#/components/schemas/Context"
+        mode:
+          type: string
+          enum: [balanced, comfort, discovery]
+          default: balanced
+        exploration_target:
+          type: number
+          minimum: 0
+          maximum: 1
+        min_popularity: { type: number, minimum: 0, maximum: 1 }
+        max_popularity: { type: number, minimum: 0, maximum: 1 }
+        include_explicit: { type: boolean }
+        excluded_track_ids:
+          type: array
+          items: { type: string }
+        excluded_artist_ids:
+          type: array
+          items: { type: string }
+        excluded_genres:
+          type: array
+          items: { type: string }
+    Recommendation:
+      type: object
+      required: [track, score, rank, reason, score_breakdown, explanation]
+      properties:
+        track:
+          $ref: "#/components/schemas/Track"
+        score: { type: number }
+        rank: { type: integer }
+        reason: { type: string }
+        score_breakdown:
+          $ref: "#/components/schemas/ScoreBreakdown"
+        explanation:
+          type: object
+          additionalProperties: { type: number }
+    ScoreBreakdown:
+      type: object
+      properties:
+        content: { type: number }
+        collaborative: { type: number }
+        popularity: { type: number }
+        exploration: { type: number }
+        diversity: { type: number }
+        safety: { type: number }
+        commercial: { type: number }
+        final: { type: number }
+    TasteProfile:
+      type: object
+      required: [user_id, vector, top_genres, interaction_count, confidence, exploration_readiness, updated_at]
+      properties:
+        user_id: { type: string }
+        vector:
+          type: array
+          items: { type: number }
+        top_genres:
+          type: object
+          additionalProperties: { type: number }
+        interaction_count: { type: integer }
+        confidence: { type: number }
+        exploration_readiness: { type: number }
+        updated_at:
+          type: string
+          format: date-time
+    UserControls:
+      type: object
+      properties:
+        user_id: { type: string }
+        allow_explicit: { type: boolean, default: true }
+        excluded_tracks:
+          type: array
+          items: { type: string }
+        excluded_artists:
+          type: array
+          items: { type: string }
+        excluded_genres:
+          type: array
+          items: { type: string }
+        postponed_tracks:
+          type: array
+          items: { type: string }
+    ProviderSource:
+      type: object
+      required: [type, value]
+      properties:
+        type:
+          type: string
+          enum: [track, album, playlist, artist, url]
+        value:
+          type: string
+    SpotifyImportRequest:
+      type: object
+      required: [source]
+      properties:
+        source:
+          $ref: "#/components/schemas/ProviderSource"
+        market:
+          type: string
+          minLength: 2
+          maxLength: 2
+          default: US
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 100
+        enrich_musicbrainz:
+          type: boolean
+          default: true
+        persist:
+          type: boolean
+          default: true
+        allow_missing_features:
+          type: boolean
+          default: false
+    SpotifySearchRequest:
+      type: object
+      required: [query]
+      properties:
+        query:
+          type: string
+          minLength: 1
+        type:
+          type: string
+          enum: [track, album, artist, playlist]
+          default: track
+        market:
+          type: string
+          minLength: 2
+          maxLength: 2
+          default: US
+        limit:
+          type: integer
+          minimum: 1
+          maximum: 10
+          default: 5
+        persist:
+          type: boolean
+          default: false
+        enrich_musicbrainz:
+          type: boolean
+          default: true
+        allow_missing_features:
+          type: boolean
+          default: false
+    ProviderImportResponse:
+      type: object
+      required: [import_id, imported_tracks, updated_tracks, skipped, warnings]
+      properties:
+        import_id: { type: string }
+        imported_tracks: { type: integer, minimum: 0 }
+        updated_tracks: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        warnings:
+          type: array
+          items: { type: string }
+    SpotifySearchResponse:
+      type: object
+      required: [tracks, persisted, skipped, warnings]
+      properties:
+        tracks:
+          type: array
+          items:
+            $ref: "#/components/schemas/Track"
+        persisted: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        warnings:
+          type: array
+          items: { type: string }
+    MusicBrainzEnrichRequest:
+      type: object
+      required: [track_ids]
+      properties:
+        track_ids:
+          type: array
+          minItems: 1
+          items: { type: string }
+        force:
+          type: boolean
+          default: false
+    MusicBrainzEnrichResponse:
+      type: object
+      required: [updated, skipped, warnings]
+      properties:
+        updated: { type: integer, minimum: 0 }
+        skipped: { type: integer, minimum: 0 }
+        warnings:
+          type: array
+          items: { type: string }
+    ProviderStatusResponse:
+      type: object
+      required: [spotify, musicbrainz, cache]
+      properties:
+        spotify:
+          $ref: "#/components/schemas/ProviderStatus"
+        musicbrainz:
+          $ref: "#/components/schemas/ProviderStatus"
+        cache:
+          $ref: "#/components/schemas/ProviderCacheStats"
+    ProviderStatus:
+      type: object
+      required: [configured, available, checked_at]
+      properties:
+        configured: { type: boolean }
+        token_mode:
+          type: string
+          enum: [client_credentials, static_bearer, user_agent, unconfigured]
+        available: { type: boolean }
+        last_error: { type: string }
+        checked_at:
+          type: string
+          format: date-time
+    ProviderCacheStats:
+      type: object
+      required: [entries, fresh_entries, stale_entries]
+      properties:
+        entries: { type: integer, minimum: 0 }
+        fresh_entries: { type: integer, minimum: 0 }
+        stale_entries: { type: integer, minimum: 0 }
+    CursorPage:
+      type: object
+      required: [has_more]
+      properties:
+        next_cursor:
+          type:
+            - string
+            - "null"
+        has_more:
+          type: boolean
+    Problem:
+      type: object
+      required: [type, title, status]
+      properties:
+        type: { type: string, format: uri }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }

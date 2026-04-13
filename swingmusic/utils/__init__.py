@@ -1,0 +1,51 @@
+import locale
+import re
+from collections.abc import Iterable
+from typing import TypeVar
+
+T = TypeVar("T")
+
+# Set to user's default locale:
+locale.setlocale(locale.LC_ALL, "")
+
+# Or set to a specific locale:
+# locale.setlocale(locale.LC_ALL, 'en_US.UTF-8')
+
+
+def format_number(number: float) -> str:
+    return locale.format_string("%d", number, grouping=True)
+
+
+def flatten(list_: Iterable[list[T]]) -> list[T]:
+    """
+    Flattens a list of lists into a single list.
+    """
+    return [item for sublist in list_ for item in sublist]
+
+
+def create_valid_filename(filename: str) -> str:
+    """
+    Create a valid filename by removing invalid characters.
+    """
+    # Remove invalid characters for filenames
+    invalid_chars = r'[<>:"/\\|?*]'
+    filename = re.sub(invalid_chars, "_", filename)
+
+    # Remove leading/trailing spaces and dots
+    filename = filename.strip(" .")
+
+    # Ensure filename is not empty
+    if not filename:
+        filename = "unnamed"
+
+    return filename
+
+
+class classproperty(property):
+    """
+    A class property decorator.
+    """
+
+    def __get__(self, owner_self, owner_cls):
+        if self.fget:
+            return self.fget(owner_cls)

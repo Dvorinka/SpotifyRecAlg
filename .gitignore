@@ -1,0 +1,25 @@
+# Go
+bin/
+*.test
+coverage.out
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Local env and logs
+.env
+*.log
+
+# OS/editor
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*~

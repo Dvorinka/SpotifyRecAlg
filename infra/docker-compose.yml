@@ -1,0 +1,35 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: spotify
+      POSTGRES_PASSWORD: spotify
+      POSTGRES_DB: spotifyrec
+    ports:
+      - "5432:5432"
+    volumes:
+      - spotifyrec-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U spotify -d spotifyrec"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build:
+      context: ../apps/backend
+    environment:
+      APP_ENV: development
+      HTTP_ADDR: :8080
+      STORE_DRIVER: postgres
+      DATABASE_URL: postgres://spotify:spotify@postgres:5432/spotifyrec?sslmode=disable
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command:
+      - /app/recommendation-api
+
+volumes:
+  spotifyrec-postgres:

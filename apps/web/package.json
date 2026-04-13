@@ -1,0 +1,9 @@
+{
+  "name": "flow-web",
+  "version": "1.0.0",
+  "description": "Minimal music discovery UI",
+  "scripts": {
+    "start": "npx serve . -p 3000 -s",
+    "dev": "npx serve . -p 3000 -s"
+  }
+}

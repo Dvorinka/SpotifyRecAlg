@@ -1,0 +1,16 @@
+from dataclasses import asdict
+
+from swingmusic.models.playlist import Playlist
+
+
+def serialize_for_card(playlist: Playlist, to_remove=None):
+    if to_remove is None:
+        to_remove = set()
+    p_dict = asdict(playlist)
+
+    props = {"trackhashes"}.union(to_remove)
+
+    for key in props:
+        p_dict.pop(key, None)
+
+    return p_dict

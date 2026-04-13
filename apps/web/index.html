@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flow — Music Discovery</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary: #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-tertiary: #121212;
+            --bg-input: #181818;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a0a0;
+            --text-muted: #6a6a6a;
+            --accent: #00d4ff;
+            --accent-dim: rgba(0, 212, 255, 0.1);
+            --border: #2a2a2a;
+            --radius: 12px;
+            --radius-sm: 6px;
+            --space-xs: 0.5rem;
+            --space-sm: 0.75rem;
+            --space-md: 1.25rem;
+            --space-lg: 2rem;
+            --space-xl: 3rem;
+            --space-2xl: 5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: var(--space-xl) var(--space-lg);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: var(--space-2xl);
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.02em;
+            margin-bottom: var(--space-sm);
+        }
+
+        .logo span {
+            color: var(--accent);
+        }
+
+        .tagline {
+            color: var(--text-secondary);
+            font-size: 1rem;
+            font-weight: 300;
+            letter-spacing: 0.02em;
+        }
+
+        /* Input Section */
+        .input-section {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: var(--space-xl);
+            margin-bottom: var(--space-xl);
+        }
+
+        .input-label {
+            display: block;
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-sm);
+        }
+
+        .url-input-wrapper {
+            display: flex;
+            gap: var(--space-sm);
+        }
+
+        .url-input {
+            flex: 1;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: var(--space-md);
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        .url-input::placeholder {
+            color: var(--text-muted);
+        }
+
+        .url-input:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px var(--accent-dim);
+        }
+
+        .submit-btn {
+            background: var(--accent);
+            color: var(--bg-primary);
+            border: none;
+            border-radius: var(--radius-sm);
+            padding: var(--space-md) var(--space-lg);
+            font-size: 0.9rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        .submit-btn:hover {
+            opacity: 0.9;
+        }
+
+        .submit-btn:active {
+            transform: scale(0.98);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        /* Seed Track */
+        .seed-track {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: var(--space-lg);
+            margin-bottom: var(--space-xl);
+            display: none;
+        }
+
+        .seed-track.visible {
+            display: block;
+        }
+
+        .seed-header {
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--accent);
+            margin-bottom: var(--space-md);
+        }
+
+        .track-info {
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+        }
+
+        .track-artwork {
+            width: 64px;
+            height: 64px;
+            background: var(--bg-input);
+            border-radius: var(--radius-sm);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .track-artwork img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: var(--radius-sm);
+        }
+
+        .track-meta h3 {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+        }
+
+        .track-meta p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        /* Recommendations */
+        .recommendations {
+            display: none;
+        }
+
+        .recommendations.visible {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            margin-bottom: var(--space-md);
+        }
+
+        .rec-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+
+        .rec-item {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: var(--space-md);
+            display: flex;
+            align-items: center;
+            gap: var(--space-md);
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .rec-item:hover {
+            border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+        .rec-rank {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--accent);
+            background: var(--accent-dim);
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .rec-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .rec-title {
+            font-weight: 500;
+            margin-bottom: 0.15rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .rec-artist {
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .rec-reason {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        .rec-links {
+            display: flex;
+            gap: var(--space-xs);
+            flex-shrink: 0;
+        }
+
+        .service-link {
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.75rem;
+            transition: all 0.2s;
+        }
+
+        .service-link:hover {
+            background: var(--accent-dim);
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+
+        /* Loading */
+        .loading {
+            text-align: center;
+            padding: var(--space-2xl);
+            color: var(--text-secondary);
+            display: none;
+        }
+
+        .loading.visible {
+            display: block;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 2px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto var(--space-md);
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Error */
+        .error {
+            background: rgba(255, 50, 50, 0.1);
+            border: 1px solid rgba(255, 50, 50, 0.3);
+            border-radius: var(--radius-sm);
+            padding: var(--space-md);
+            color: #ff6666;
+            margin-top: var(--space-md);
+            display: none;
+        }
+
+        .error.visible {
+            display: block;
+        }
+
+        /* Empty State */
+        .empty-state {
+            text-align: center;
+            padding: var(--space-2xl) var(--space-lg);
+            color: var(--text-muted);
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding-top: var(--space-2xl);
+            color: var(--text-muted);
+            font-size: 0.8rem;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            .container {
+                padding: var(--space-lg) var(--space-md);
+            }
+
+            .url-input-wrapper {
+                flex-direction: column;
+            }
+
+            .rec-links {
+                flex-wrap: wrap;
+                max-width: 100px;
+            }
+
+            .track-info {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <div class="logo">Flow<span>.</span></div>
+            <p class="tagline">Paste a song link. Discover more.</p>
+        </header>
+
+        <section class="input-section">
+            <label class="input-label">Song Link</label>
+            <div class="url-input-wrapper">
+                <input 
+                    type="text" 
+                    class="url-input" 
+                    id="urlInput"
+                    placeholder="https://open.spotify.com/track/..."
+                    autocomplete="off"
+                >
+                <button class="submit-btn" id="submitBtn">Discover</button>
+            </div>
+            <div class="error" id="error"></div>
+        </section>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Finding similar music...</p>
+        </div>
+
+        <div class="seed-track" id="seedTrack">
+            <div class="seed-header">Starting From</div>
+            <div class="track-info">
+                <div class="track-artwork" id="seedArtwork">♪</div>
+                <div class="track-meta">
+                    <h3 id="seedTitle">—</h3>
+                    <p id="seedArtist">—</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="recommendations" id="recommendations">
+            <div class="section-title">Recommendations</div>
+            <div class="rec-list" id="recList"></div>
+        </div>
+
+        <div class="empty-state" id="emptyState">
+            <p>Supports Spotify, Apple Music, YouTube Music, Tidal, Deezer, SoundCloud</p>
+        </div>
+
+        <footer class="footer">
+            <p>Powered by <a href="https://developer.spotify.com/documentation/web-api" target="_blank">Spotify API</a> & <a href="https://song.link" target="_blank">Songlink</a></p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
