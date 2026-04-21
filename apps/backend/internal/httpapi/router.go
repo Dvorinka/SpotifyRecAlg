@@ -62,6 +62,10 @@ func NewRouter(cfg RouterConfig) http.Handler {
 	v1.POST("/providers/musicbrainz/enrich", handler.enrichMusicBrainz)
 	v1.GET("/providers/status", handler.providerStatus)
 
+	router.Static("/static", "./web/static")
+	router.StaticFile("/", "./web/index.html")
+	router.StaticFile("/app.js", "./web/app.js")
+
 	return router
 }
 
